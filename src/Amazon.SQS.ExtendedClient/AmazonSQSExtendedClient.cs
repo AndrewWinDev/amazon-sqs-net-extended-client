@@ -2,6 +2,7 @@
 {
     using Model;
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
     using Runtime;
     using S3.Model;
     using System;
@@ -14,6 +15,8 @@
 
     public partial class AmazonSQSExtendedClient : AmazonSQSExtendedClientBase
     {
+        private static readonly string _amazonPayloadOffloadingString = "software.amazon.payloadoffloading.PayloadS3Pointer";
+
         private readonly ExtendedClientConfiguration clientConfiguration;
 
         public AmazonSQSExtendedClient(IAmazonSQS sqsClient)
@@ -430,6 +433,13 @@
         {
             try
             {
+                if (clientConfiguration.UseJavaClientMessageFormat)
+                {
+                    var javaS3PointerContent = new List<object> { _amazonPayloadOffloadingString, s3Pointer };
+
+                    return JsonConvert.SerializeObject(javaS3PointerContent);
+                }
+
                 return JsonConvert.SerializeObject(s3Pointer);
             }
             catch (Exception e)
@@ -442,12 +452,38 @@
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(messageBody))
+                    throw new AmazonClientException("Failed to read the S3 object pointer from an SQS message. message body is empty.");
+
+
+                if (clientConfiguration.UseJavaClientMessageFormat) 
+                {
+                    return ExtractMessageS3PointerFromJavaClientFormat(messageBody);
+                }
+
                 return JsonConvert.DeserializeObject<MessageS3Pointer>(messageBody);
             }
             catch (Exception e)
             {
                 throw new AmazonClientException("Failed to read the S3 object pointer from an SQS message. Message was not received.", e);
             }
+        }
+
+        private MessageS3Pointer ExtractMessageS3PointerFromJavaClientFormat(string messageBody)
+        {
+            // Amazon Extended client for Java uses schema: ["software.amazon.payloadoffloading.PayloadS3Pointer",{"s3BucketName":"extended-client-bucket","s3Key":"xxxx-xxxxx-xxxxx-xxxxxx"}]
+            var parsedObject = JToken.Parse(messageBody);
+
+            var children = parsedObject.Children().ToList();
+            var messageS3Pointer = children.Count == 2 ?
+                    children[1].Type == JTokenType.Object ? children[1].ToString() :
+                        children[0].Type == JTokenType.Object ? children[0].ToString() : string.Empty
+                        : string.Empty;
+
+            if (string.IsNullOrWhiteSpace(messageS3Pointer))
+                throw new AmazonClientException($"Failed to read the S3 object pointer in Java client format from an SQS message. MessageBody:{messageBody}");
+
+            return JsonConvert.DeserializeObject<MessageS3Pointer>(messageS3Pointer);
         }
     }
 }

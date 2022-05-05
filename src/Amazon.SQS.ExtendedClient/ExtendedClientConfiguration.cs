@@ -41,11 +41,13 @@
 
         public bool RetainS3Messages { get; set; }
 
-        public ExtendedClientConfiguration WithLargePayloadSupportEnabled(IAmazonS3 s3, string s3BucketName)
+        public bool UseJavaClientMessageFormat { get; private set; }
+
+        public ExtendedClientConfiguration WithLargePayloadSupportEnabled(IAmazonS3 s3, string s3BucketName, bool useJavaClientMessageFormat = false)
         {
-            return WithLargePayloadSupportEnabled(s3, s3BucketName, S3CannedACL.BucketOwnerFullControl);
+            return WithLargePayloadSupportEnabled(s3, s3BucketName, S3CannedACL.BucketOwnerFullControl, useJavaClientMessageFormat);
         }
-        public ExtendedClientConfiguration WithLargePayloadSupportEnabled(IAmazonS3 s3, string s3BucketName, S3CannedACL s3CannedACL)
+        public ExtendedClientConfiguration WithLargePayloadSupportEnabled(IAmazonS3 s3, string s3BucketName, S3CannedACL s3CannedACL, bool useJavaClientMessageFormat = false)
         {
             if (s3 == null)
             {
@@ -66,7 +68,7 @@
             this.S3BucketName = s3BucketName;
             this.IsLargePayloadSupportEnabled = true;
             this.S3CannedACL = s3CannedACL;
-
+            UseJavaClientMessageFormat = useJavaClientMessageFormat;
             return this;
         }
 
