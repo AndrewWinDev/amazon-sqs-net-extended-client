@@ -143,11 +143,26 @@
             {
                 if (message.MessageAttributes.TryGetValue(SQSExtendedClientConstants.RESERVED_ATTRIBUTE_NAME, out _))
                 {
-                    var messageS3Pointer = ReadMessageS3PointerFromJson(message.Body);
-                    var originalMessageBody = await GetTextFromS3Async(messageS3Pointer.S3BucketName, messageS3Pointer.S3Key, cancellationToken).ConfigureAwait(false);
-                    message.Body = originalMessageBody;
-                    message.ReceiptHandle = EmbedS3PointerInReceiptHandle(message.ReceiptHandle, messageS3Pointer.S3BucketName, messageS3Pointer.S3Key);
-                    message.MessageAttributes.Remove(SQSExtendedClientConstants.RESERVED_ATTRIBUTE_NAME);
+                    try
+                    {
+                        var messageS3Pointer = ReadMessageS3PointerFromJson(message.Body);
+                        var originalMessageBody = await GetTextFromS3Async(messageS3Pointer.S3BucketName, messageS3Pointer.S3Key, cancellationToken).ConfigureAwait(false);
+                        message.Body = originalMessageBody;
+                        message.ReceiptHandle = EmbedS3PointerInReceiptHandle(message.ReceiptHandle, messageS3Pointer.S3BucketName, messageS3Pointer.S3Key);
+                    }
+                    catch (Exception e)
+                    {
+                        
+                        if (!clientConfiguration.SwallowErrorOnReceiveMessageAndEmbedIntoBody)
+                            throw;
+
+                        // Embed error information into the message itself to allow client to diagnose/troubleshoot issues.
+                        message.Body = JsonConvert.SerializeObject(new { Status = "Failed", Message = "Can't retrieve big message from S3.", Exception = e });
+                    }
+                    finally
+                    {
+                        message.MessageAttributes.Remove(SQSExtendedClientConstants.RESERVED_ATTRIBUTE_NAME);
+                    }
                 }
             }
 

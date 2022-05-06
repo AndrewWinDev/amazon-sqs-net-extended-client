@@ -43,6 +43,14 @@
 
         public bool UseJavaClientMessageFormat { get; private set; }
 
+        /// <summary>
+        /// If error occurred during receiving big message from S3, it allows to avoid throwing it higher and embed error information into the message body so,
+        /// clients will be able to troubleshoot issues with failed messages and if there were more then one message, 
+        /// others can be handled.
+        /// </summary>
+        public bool SwallowErrorOnReceiveMessageAndEmbedIntoBody { get; private set; }
+
+
         public ExtendedClientConfiguration WithLargePayloadSupportEnabled(IAmazonS3 s3, string s3BucketName, bool useJavaClientMessageFormat = false)
         {
             return WithLargePayloadSupportEnabled(s3, s3BucketName, S3CannedACL.BucketOwnerFullControl, useJavaClientMessageFormat);
@@ -69,6 +77,18 @@
             this.IsLargePayloadSupportEnabled = true;
             this.S3CannedACL = s3CannedACL;
             UseJavaClientMessageFormat = useJavaClientMessageFormat;
+            return this;
+        }
+
+        /// <summary>
+        /// If error occurred during receiving big message from S3, it allows to avoid throwing it higher and embed error information into the message body so,
+        /// clients will be able to troubleshoot issues with failed messages and if there were more then one message, 
+        /// others can be handled.
+        /// </summary>
+        public ExtendedClientConfiguration SwallowErrorOnReceiveMessage()
+        {
+            SwallowErrorOnReceiveMessageAndEmbedIntoBody = true;
+
             return this;
         }
 
