@@ -19,11 +19,11 @@ With this library you can:
 
 ## Installation
 
-[![Nuget](https://img.shields.io/nuget/v/Amazon.SQS.ExtendedClient.svg?style=flat)](https://www.nuget.org/packages/Amazon.SQS.ExtendedClient/)
+[![Nuget](https://img.shields.io/nuget/v/Amazon.SQS.ExtendedClient.svg?style=flat)](https://www.nuget.org/packages/AWSSQS.Extended.Client/)
 
 To install via nuget, run following command in the Package Manager Console
 ```PowerShell
-Install-Package Amazon.SQS.ExtendedClient
+Install-Package AWSSQS.Extended.Client
 ```
 
 ## Usage
@@ -37,3 +37,36 @@ var extendedClient = new AmazonSQSExtendedClient(
 extendedClient.SendMessage(queueUrl, "MessageBody")
 ```
 
+## Fork Changes
+Added support for Java Extended Client SQS message format:
+```Json
+[
+  "software.amazon.payloadoffloading.PayloadS3Pointer",
+  {
+    "s3BucketName": "extended-client-bucket",
+    "s3Key": "xxxx-xxxxx-xxxxx-xxxxxx"
+  }
+]
+```
+
+### To Enable it, just use an additional parameter in the **WithLargePayloadSupportEnabled** method:
+```csharp
+public ExtendedClientConfiguration WithLargePayloadSupportEnabled(IAmazonS3 s3, string s3BucketName, bool useJavaClientMessageFormat = false);
+```
+```csharp
+var extendedConfig = new ExtendedClientConfiguration()
+        .WithLargePayloadSupportEnabled(s3Client, bucketName, true);
+```
+
+
+### Error handling on receiving messages
+If client receive more than one message and processing of the first message cause exception (for instance - original message contend was not found on S3),
+it will break overal process and throw the exception higher.
+Now, you can swallow exception, embed information about error to message body and continue processing the rest.
+Client will get the message with the error description.
+To enable this behavior:
+```csharp
+var extendedConfig = new ExtendedClientConfiguration()
+        .WithLargePayloadSupportEnabled(s3Client, bucketName, true)
+        .SwallowErrorOnReceiveMessage();
+```
