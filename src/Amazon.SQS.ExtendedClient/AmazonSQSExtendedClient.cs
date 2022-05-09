@@ -15,8 +15,6 @@
 
     public partial class AmazonSQSExtendedClient : AmazonSQSExtendedClientBase
     {
-        private static readonly string _amazonPayloadOffloadingString = "software.amazon.payloadoffloading.PayloadS3Pointer";
-
         private readonly ExtendedClientConfiguration clientConfiguration;
 
         public AmazonSQSExtendedClient(IAmazonSQS sqsClient)
@@ -157,7 +155,7 @@
                             throw;
 
                         // Embed error information into the message itself to allow client to diagnose/troubleshoot issues.
-                        message.Body = JsonConvert.SerializeObject(new { Status = "Failed", Message = "Can't retrieve big message from S3.", Exception = e });
+                        message.Body = JsonConvert.SerializeObject(new MessageStatus { Status = "Failed", Message = "Can't retrieve big message from S3.", OriginalMessage = message.Body, Exception = e});
                     }
                     finally
                     {
@@ -450,7 +448,7 @@
             {
                 if (clientConfiguration.UseJavaClientMessageFormat)
                 {
-                    var javaS3PointerContent = new List<object> { _amazonPayloadOffloadingString, s3Pointer };
+                    var javaS3PointerContent = new List<object> { SQSExtendedClientConstants.AmazonPayloadOffloadingString, new JavaMessageS3Pointer(s3Pointer)};
 
                     return JsonConvert.SerializeObject(javaS3PointerContent);
                 }

@@ -137,7 +137,7 @@
                             throw;
 
                         // Embed error information into the message itself to allow client to diagnose/troubleshoot issues.
-                        message.Body = JsonConvert.SerializeObject(new { Status = "Failed", Message = "Can't retrieve big message from S3.", Exception = e });
+                        message.Body = JsonConvert.SerializeObject(new MessageStatus { Status = "Failed", Message = "Can't retrieve big message from S3.", OriginalMessage = message.Body, Exception = e});
                     }
                     finally
                     {
